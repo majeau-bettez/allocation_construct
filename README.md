@@ -27,7 +27,7 @@ Documentation
 
 This module follows closely the notation and equations of the following articles. Please cite.
 
-> Majeau-Bettez, G., R. Wood, and A.H. Strømman. 2014. Unified Theory of Allocations and Constructs in Life Cycle Assessment and Input-Output Analysis. *Journal of Industrial Ecology* 18(5): 747–770. [10.1111/jiec.12142](dx.doi.org/10.1111/jiec.12142)
+> Majeau-Bettez, G., R. Wood, and A.H. Strømman. 2014. Unified Theory of Allocations and Constructs in Life Cycle Assessment and Input-Output Analysis. *Journal of Industrial Ecology* 18(5): 747–770. [10.1111/jiec.12142](http://dx.doi.org/10.1111/jiec.12142)
 
 > Majeau-Bettez, G., R. Wood, E.G. Hertwich, and A.H. Strømman. 2014. When do allocations and constructs respect material, energy, financial, and production balances in LCA and EEIO? *Journal of Industrial Ecology* In Press: In Press.
 

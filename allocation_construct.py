@@ -18,8 +18,10 @@ Technology, Commodity Technology and Byproduct Technology Constructs.
 
 This module was written to demonstrate and illustrate equations in:
 
-    Majeau-Bettez, G., R. Wood, and A. H. Strømman (2013) Unified Theory of
-    Allocations and Constructs, Journal of Industrial Ecology
+    Majeau-Bettez, G., R. Wood, and A.H. Strømman. 2014. Unified Theory of
+    Allocations and Constructs in Life Cycle Assessment and Input-Output
+    Analysis. Journal of Industrial Ecology 18(5): 747–770.
+    DOI:10.1111/jiec.12142
 
 Close correspondence to the original equations was favoured over computational
 speed or simplicity of notation.
@@ -284,7 +286,7 @@ def psc_agg(U, V, E_bar, Xi, G=np.empty(0)):
 
 ##############################################################################
 
-def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf):
+def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
     """Compilation of Alternate Technologies for use in AAA and AAC models
 
     Parameters
@@ -308,6 +310,17 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf):
     (com, _, org, traceable, e_com, _, _, g, _) = basic_variables(U, V)
     #
     (V_tild, V_bar, _, _) = _rank_products(E_bar, V)
+
+    # If a property layer is defined for Gamma, then evaluate unit conversion
+    if Gamma.ndim == 3:
+        if lay is None:
+            raise TypeError('expected a value for lay')
+        s = Gamma.shape
+        tmp = np.zeros((s[0], s[2]))
+        for i in range(Gamma.shape[1]):
+            tmp += diaginv(lay[i, :].dot(E_bar)).dot(Gamma[:, i, :]).dot(
+                    ddiag(lay[i, :]))
+        Gamma = tmp
 
     so = np.array(np.sum(V != 0, 0) == 1, dtype=int)
     mo = np.array(np.sum(V != 0, 0) != 1, dtype=int)
@@ -345,7 +358,7 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf):
     return(A_gamma)
 
 
-def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
+def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
     """ Alternate Activity Allocation of StUT or SuUT inventory
 
     Parameters
@@ -378,10 +391,10 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
     (V_tild, _, _, _) = _rank_products(E_bar, V)
 
     # Calculate competing technology requirements
-    A_gamma = alternate_tech(U, V, E_bar, Gamma, nmax)
+    A_gamma = alternate_tech(U, V, E_bar, Gamma, nmax, lay)
 
     if G.size:
-        F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax)
+        F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax, lay)
 
     # Allocation step
     if not traceable:

@@ -7,6 +7,7 @@ NOTATION:
   	ind	integer			number of activities
   	org	integer			number of activities of origin
 	ext	integer			number of (environmental) extensions
+	prop	interger		number of properties of multi-unit inventory
 	THETA	integer			Industrustry wildcard
 	theta	integer			commodity wildcard
 	ORG	integer			Industry of origin wildcard
@@ -42,6 +43,7 @@ INTERMEDIATE, ASSUMED VARIABLE:
         psi_ind	[1,ind]			Activity-wide unique intrinsic property
 	PHI	[ind,com]		Partition coefficients
 	Gamma 	[ind, com]		Alternate Activity for each product
+ or             [ind, prop, com]        Alternate Activity for each product in terms of specific property
 	A_gamma	[same as Z]		Alternate technology coefficient matrix
 	Theta 	[ind, com]		Competing industry for each product
   	Xi	[com, com]		Substitution Matrix

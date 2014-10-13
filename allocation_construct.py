@@ -39,7 +39,7 @@ import numpy.linalg as la
 ##############################################################################
 # PARTITION
 
-def partitionCoefficientCalc(V, PSI):
+def pa_coeff(V, PSI):
     """Calculates partition coefficients from supply and properties table
 
     Parameters
@@ -55,7 +55,6 @@ def partitionCoefficientCalc(V, PSI):
         mass
 
     """
-
     # Calculate total amount of the partition property that is output by each
     # industry (total mass output for all commodities supplied by ind. J)
     denominator = ddiag(V.T.dot(PSI))
@@ -97,7 +96,7 @@ def pa(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
     # Partitioning properties and coefficients
     # N.B. Improve control: if both PHI and PSI np.empty...
     if not PHI.size:
-        PHI = partitionCoefficientCalc(V, PSI)
+        PHI = pa_coeff(V, PSI)
 
     # Partitioning of product flows
     if not traceable:
@@ -113,7 +112,7 @@ def pa(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
                 Z[I, :, J, :] = np.outer(U[I, :, J], PHI[J, :])
 
     # Normalize system description
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V)
+    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
@@ -122,7 +121,7 @@ def pa(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
             G_all[:, J, :] = np.outer(G[:, J], PHI[J, :])
 
         # Normalize environmental extension
-        (F, _, _) = matrixNormalizer(G_all, V)
+        (F, _, _) = matrix_norm(G_all, V)
 
     return (Z, A, nn_in, nn_out, G_all, F)
 
@@ -154,18 +153,18 @@ def pc_agg(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
 
     # Partitioning properties and coefficients
     if not PHI.size:
-        PHI = partitionCoefficientCalc(V, PSI)
+        PHI = pa_coeff(V, PSI)
 
     # Partitioning of product flows
     Z = U.dot(PHI)  # <-- eq:PCagg
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V)
+    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
         G_con = G.dot(PHI)  # <-- eq:PCEnvExt
 
         # Normalize environmental extension
-        (F, _, _) = matrixNormalizer(G_con, V)
+        (F, _, _) = matrix_norm(G_con, V)
 
     return (Z, A, nn_in, nn_out, G_con, F)
 
@@ -202,7 +201,7 @@ def psa(U, V, E_bar, Xi, Theta=np.empty(0), G=np.empty(0)):
     # Basic variables
     (com, ind, org, traceable, _, e_ind, _, _, ext) = basic_variables(
             U, V, G)
-    (V_tild, V_bar, U_tild, _) = rank_products(E_bar, V, U)
+    (V_tild, V_bar, U_tild, _) = _rank_products(E_bar, V, U)
     DeltV = V_tild
 
     # Allocation of Product Flows
@@ -219,12 +218,12 @@ def psa(U, V, E_bar, Xi, Theta=np.empty(0), G=np.empty(0)):
             for I in range(org):
                 #eq:PSAtrace
                 Z[I, :, J, :] = np.outer(
-                        U_bar[I, :, J] \
-                        - Theta[I, :].dot(ddiag(Xi.dot(V_tild[:, J])))  \
-                        + Theta[I, :].dot(ddiag(e_ind.dot(U_tild[:, :, J])))
-                   , E_bar[:, J].T)
+                        U_bar[I, :, J]
+                        - Theta[I, :].dot(ddiag(Xi.dot(V_tild[:, J])))
+                        + Theta[I, :].dot(ddiag(e_ind.dot(U_tild[:, :, J]))),
+                   E_bar[:, J].T)
     # Normalizing
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V_bar)
+    (A, nn_in, nn_out) = matrix_norm(Z, V_bar)
 
     # Allocation of Environmental Extensions
     if G.size:
@@ -233,7 +232,7 @@ def psa(U, V, E_bar, Xi, Theta=np.empty(0), G=np.empty(0)):
             # eq:PSAEnvExt
             G_all[:, J, :] = np.outer(G[:, J], E_bar[:, J].T)
         # Normalization
-        (F, _, _) = matrixNormalizer(G_all, V_bar)
+        (F, _, _) = matrix_norm(G_all, V_bar)
 
     # Return allocated values
     return(Z, DeltV, A, nn_in, nn_out, G_all, F)
@@ -265,19 +264,19 @@ def psc_agg(U, V, E_bar, Xi, G=np.empty(0)):
     F = np.empty(0)
 
     # Basic variables
-    (V_tild, V_bar, _, _) = rank_products(E_bar, V)
+    (V_tild, V_bar, _, _) = _rank_products(E_bar, V)
 
     # Construction of Product Flows
     Z = (U - Xi.dot(V_tild)).dot(E_bar.T)  # <-- eq:PSCagg
     # Normalizing
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V_bar)
+    (A, nn_in, nn_out) = matrix_norm(Z, V_bar)
 
     # Allocation of Environmental Extensions
     if G.size:
         G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt
 
         # Normalization
-        (F, _, _) = matrixNormalizer(G_con, V_bar)
+        (F, _, _) = matrix_norm(G_con, V_bar)
 
     # Return allocated values
     return(Z, A, nn_in, nn_out, G_con, F)
@@ -285,7 +284,7 @@ def psc_agg(U, V, E_bar, Xi, G=np.empty(0)):
 
 ##############################################################################
 
-def alternateTechnologyCoefficient(U, V, E_bar, Gamma, nmax=np.Inf):
+def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf):
     """Compilation of Alternate Technologies for use in AAA and AAC models
 
     Parameters
@@ -308,7 +307,7 @@ def alternateTechnologyCoefficient(U, V, E_bar, Gamma, nmax=np.Inf):
     # Basic variables
     (com, _, org, traceable, e_com, _, _, g, _) = basic_variables(U, V)
     #
-    (V_tild, V_bar, _, _) = rank_products(E_bar, V)
+    (V_tild, V_bar, _, _) = _rank_products(E_bar, V)
 
     so = np.array(np.sum(V != 0, 0) == 1, dtype=int)
     mo = np.array(np.sum(V != 0, 0) != 1, dtype=int)
@@ -376,13 +375,13 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
 
     # Basic variables
     (com, ind, org, traceable, _, _, _, _, ext) = basic_variables(U, V, G)
-    (V_tild, _, _, _) = rank_products(E_bar, V)
+    (V_tild, _, _, _) = _rank_products(E_bar, V)
 
     # Calculate competing technology requirements
-    A_gamma = alternateTechnologyCoefficient(U, V, E_bar, Gamma, nmax)
+    A_gamma = alternate_tech(U, V, E_bar, Gamma, nmax)
 
     if G.size:
-        F_gamma = alternateTechnologyCoefficient(G, V, E_bar, Gamma, nmax)
+        F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax)
 
     # Allocation step
     if not traceable:
@@ -397,9 +396,10 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
             for J in range(ind):
                 #eq:AAAtrace
                 Z[I, :, J, :] = np.outer(
-                    U[I, :, J] - A_gamma[I, :, :].dot(V_tild[:, J]),
-                    E_bar[:, J].T) + A_gamma[I, :, :].dot(ddiag(V_tild[:, J]))
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V)
+                        U[I, :, J] - A_gamma[I, :, :].dot(V_tild[:, J]),
+                        E_bar[:, J].T
+                        ) + A_gamma[I, :, :].dot(ddiag(V_tild[:, J]))
+    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
@@ -409,7 +409,7 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
             G_all[:, J, :] = np.outer(
                     G[:, J] - F_gamma.dot(V_tild[:, J]), E_bar[:, J].T) + \
                     F_gamma.dot(ddiag(V_tild[:, J]))
-        (F, _, _) = matrixNormalizer(G_all, V)
+        (F, _, _) = matrix_norm(G_all, V)
 
 #   # Output
     return(Z, A, nn_in, nn_out, G_all, F)
@@ -445,22 +445,22 @@ def aac_agg(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
 
     # Basic variables
     (_, _, _, _, _, e_ind, _, _, _) = basic_variables(U, V, G)
-    (V_tild, _, _, _) = rank_products(E_bar, V)
+    (V_tild, _, _, _) = _rank_products(E_bar, V)
 
     # Calculate competing technology requirements
-    A_gamma = alternateTechnologyCoefficient(U, V, E_bar, Gamma, nmax)
+    A_gamma = alternate_tech(U, V, E_bar, Gamma, nmax)
 
     # Allocation step
     Z = (U - A_gamma.dot(V_tild)).dot(E_bar.T) + \
             A_gamma.dot(ddiag(V_tild.dot(e_ind)))  # <-- eq:AACagg
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V)
+    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
-        F_gamma = alternateTechnologyCoefficient(G, V, E_bar, Gamma, nmax)
+        F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax)
         G_con = (G - F_gamma.dot(V_tild)).dot(E_bar.T) + \
                 F_gamma.dot(ddiag(V_tild.dot(e_ind)))  # <-- eq:AACEnvExt
-        (F, _, _) = matrixNormalizer(G_con, V)
+        (F, _, _) = matrix_norm(G_con, V)
 
 #   Output
     return(Z, A, nn_in, nn_out, G_con, F)
@@ -496,7 +496,7 @@ def lsa(U, V, E_bar, G=np.empty(0)):
 
     # Basic variables
     (com, ind, _, _, e_com, _, _, g, ext) = basic_variables(U, V, G)
-    (V_tild, _, _, _) = rank_products(E_bar, V)
+    (V_tild, _, _, _) = _rank_products(E_bar, V)
     Z = np.zeros((com, ind, com))
     V_dd = np.zeros(V.shape)
 
@@ -509,7 +509,7 @@ def lsa(U, V, E_bar, G=np.empty(0)):
         V_dd[:, J] = E_bar[:, J].dot(g[J])  # <-- eq:LSA
 
     # Normalizing
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V_dd)
+    (A, nn_in, nn_out) = matrix_norm(Z, V_dd)
 
     # Allocation of Environmental Extensions
     if G.size:
@@ -519,7 +519,7 @@ def lsa(U, V, E_bar, G=np.empty(0)):
             G_all[:, J, :] = np.outer(G[:, J], E_bar[:, J].T)
 
         # Normalization
-        (F, _, _) = matrixNormalizer(G_all, V_dd)
+        (F, _, _) = matrix_norm(G_all, V_dd)
 
     # Return allocated values
     return(Z, DeltV, A, nn_in, nn_out, G_all, F)
@@ -555,13 +555,13 @@ def lsc(U, V, E_bar, G=np.empty(0)):
     Z = U.dot(E_bar.T)  # <-- eq:LSCagg
     V_dd = E_bar.dot(ddiag(g))  # <-- eq:LSCagg
     # Normalizing
-    (A, nn_in, nn_out) = matrixNormalizer(Z, V_dd)
+    (A, nn_in, nn_out) = matrix_norm(Z, V_dd)
 
     # Allocation of Environmental Extensions
     if G.size:
         G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt
         # Normalization
-        (F, _, _) = matrixNormalizer(G_con, V_dd)
+        (F, _, _) = matrix_norm(G_con, V_dd)
 
     # Return allocated values
     return(Z, A, nn_in, nn_out, G_con, F)
@@ -594,11 +594,11 @@ def itc(U, V, G=np.empty(0)):
     (_, _, _, _, _, _, _, g, _) = basic_variables(U, V, G)
 
     Z = U.dot(diaginv(g)).dot(V.T)  # <-- eq:itc
-    (A, _, _) = matrixNormalizer(Z, V)
+    (A, _, _) = matrix_norm(Z, V)
 
     if G.size:
         G_con = G.dot(diaginv(g)).dot(V.T)  # <-- eq:ITCEnvExt
-        (F, _, _) = matrixNormalizer(G_con, V)
+        (F, _, _) = matrix_norm(G_con, V)
 
     return(Z, A, G_con, F)
 
@@ -631,7 +631,7 @@ def ctc(U, V, G=np.empty(0)):
 
     if G.size:
         F = G.dot(la.inv(V))
-        G_con = F.dot(ddiag(q))  # <--eq:CTCEnvExt 
+        G_con = F.dot(ddiag(q))  # <--eq:CTCEnvExt
     return(Z, A, G_con, F)
 
 
@@ -661,19 +661,20 @@ def btc(U, V, E_bar=np.empty(0), G=np.empty(0)):
     if not E_bar.size:
         E_bar = np.eye(len(V))
 
-    (V_tild, V_bar, _, _) = rank_products(E_bar, V)
+    (V_tild, V_bar, _, _) = _rank_products(E_bar, V)
 
     # The construct
-    Z = (U - V_tild).dot(E_bar.T)  # <-- eq:btc 
-    (A, _, _) = matrixNormalizer(Z, V_bar)
+    Z = (U - V_tild).dot(E_bar.T)  # <-- eq:btc
+    (A, _, _) = matrix_norm(Z, V_bar)
 
     if G.size:
-        G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt 
-        (F, _, _) = matrixNormalizer(G_con, V_bar)
+        G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt
+        (F, _, _) = matrix_norm(G_con, V_bar)
     return(Z, A, G_con, F)
 
 ###############################################################################
 #  Helper functions
+
 
 def basic_variables(U, V, G=np.empty(0)):
     """ From Use, Supply and Emissions, calculate intermediate variables.
@@ -715,7 +716,6 @@ def basic_variables(U, V, G=np.empty(0)):
     else:
         print("Strange dimensions of U and V")
 
-
     if G.size:
         ext = np.size(G, 0)
 
@@ -732,7 +732,8 @@ def basic_variables(U, V, G=np.empty(0)):
 
     return (com, ind, org, traceable, e_com, e_ind, q, g, ext)
 
-def rank_products(E_bar, V=np.empty(0), U=np.empty(0)):
+
+def _rank_products(E_bar, V=np.empty(0), U=np.empty(0)):
     """Distinguish between primary and secondary products in flow variables
 
     Parameters
@@ -774,7 +775,7 @@ def rank_products(E_bar, V=np.empty(0), U=np.empty(0)):
 
     return(V_tild, V_bar, U_tild, E_tild)
 
-def collapse_dimensions(X, first2dimensions=False):
+def collapse_dims(X, first2dimensions=False):
     """Collapse 3-d or 4-d array in two dimensions
 
     Parameters
@@ -823,7 +824,7 @@ def collapse_dimensions(X, first2dimensions=False):
     return Z
 
 
-def matrixNormalizer(Z, V):
+def matrix_norm(Z, V):
     """ Normalizes a flow matrix, even if some rows and columns are null
 
     Parameters
@@ -841,8 +842,8 @@ def matrixNormalizer(Z, V):
 
     """
     # Collapse dimensions
-    if Z.ndim  > 2:
-        Z = collapse_dimensions(Z)
+    if Z.ndim > 2:
+        Z = collapse_dims(Z)
     # Basic Variables
     com = np.size(V, 0)
     ind = np.size(V, 1)
@@ -871,7 +872,7 @@ def matrixNormalizer(Z, V):
         nn_out = q_tr != 0
         A = Z[nn_in, :][:, nn_out].dot(la.inv(ddiag(q_tr[nn_out])))
     else:
-        nn_out = np.ones(size(Z, 1), dtype=bool)
+        nn_out = np.ones(np.size(Z, 1), dtype=bool)
         A = Z.dot(la.inv(ddiag(q_tr)))
 
     # Return

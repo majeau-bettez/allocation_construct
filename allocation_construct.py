@@ -788,53 +788,37 @@ def _rank_products(E_bar, V=np.empty(0), U=np.empty(0)):
 
     return(V_tild, V_bar, U_tild, E_tild)
 
-def collapse_dims(X, first2dimensions=False):
+def collapse_dims(x, first2dimensions=False):
     """Collapse 3-d or 4-d array in two dimensions
 
     Parameters
     ----------
-    X : 3d or 4d array to be collapsed
+    x : 3d or 4d array to be collapsed
+
     first2dimensions : Boolean : For 3d array, should the last two dimensions
         be flattened together (default) or should the first two be
         flattened together instead (=true)?
 
     Returns
     --------
-    Z : Flatened 2d array
+    z : Flatened 2d array
 
     """
-    if X.ndim == 4:
-        org = np.size(X, 0)
-        com = np.size(X, 1)
-        ind = np.size(X, 2)
-        Y = np.zeros([org * com,  ind, com])
-        for I in range(org):
-            Y[I * com:(I + 1) * com, :, :] = X[I, :, :, :]
-    else:
-        Y = X
-    #
-    # Collapse the first two of three dimensions
-    if Y.ndim == 3 and first2dimensions:
-        org = np.size(Y, 0)
-        com = np.size(Y, 1)
-        ind = np.size(Y, 2)
-        Z = np.zeros([org * com, ind])
-        for I in range(org):
-            Z[I * com:(I + 1) * com, :] = Y[I, :, :]
-    #
-    # Collapse last two dimensions of three
-    elif Y.ndim == 3:
-        org = np.size(Y, 0)
-        ind = np.size(Y, 1)
-        com = np.size(Y, 2)
-        Z = np.zeros([org, ind * com])
-        for J in range(ind):
-            Z[:, J * com:(J + 1) * com] = Y[:, J, :]
-    elif Y.ndim == 2:
+
+    s = x.shape
+    if x.ndim == 4:
+        z = x.reshape((s[0] * s[1], s[2] * s[3]))
+    elif x.ndim == 3:
+        if first2dimensions:
+            z = x.reshape((s[0] * s[1], s[2]))
+        else:
+            z = x.reshape((s[0], s[1] * s[2]))
+    elif x.ndim == 2:
         print('Already in 2-dimensional, pass')
+        z = x
     else:
-        print(('PROBLEM? ndim(Y) = ', ndim(Y)))
-    return Z
+        print(('PROBLEM? ndim(Y) = ', ndim(x)))
+    return z
 
 
 def matrix_norm(Z, V):
@@ -910,9 +894,9 @@ def diaginv(x):
     """
     y = np.ones(len(x)) / x
     y[y == np.Inf] = 0
-    return np.diag(y)
+    return ddiag(y)
 
-def ddiag(a):
+def ddiag(a, nozero=False):
     """ Robust diagonalization : always put selected diagonal on a diagonal!
 
     This small function aims at getting a behaviour closer to the
@@ -927,7 +911,7 @@ def ddiag(a):
 
     Parameters
     ----------
-    a : Matrix or vector to be diagonalized
+    a : numpy matrix or vector to be diagonalized
 
     Returns
     --------
@@ -936,7 +920,8 @@ def ddiag(a):
     Raises:
        ValueError if a is more than 2dimensional
 
-    See Also:
+    See Also
+    --------
         diag
     """
 
@@ -949,7 +934,7 @@ def ddiag(a):
 
         #...but with dimension of magnitude 1
         if min(a.shape) == 1:
-            b = np.diag(a)
+            b = np.diag(np.squeeze(a))
 
         # ... or a "true" 2-d matrix
         else:
@@ -958,4 +943,16 @@ def ddiag(a):
     else:
         raise ValueError("Input must be 1- or 2-d")
 
-    return b
+    # Extreme case: a 1 element matrix/vector
+    if b.ndim == 1 & b.size == 1:
+        b = b.reshape((1, 1))
+
+    if nozero:
+        # Replace offdiagonal zeros by nan if desired
+        c = np.empty_like(b) *  np.nan
+        di = np.diag_indices_from(c)
+        c[di] = b.diagonal()
+        return c
+    else:
+        # A certainly diagonal vector is returned
+        return b

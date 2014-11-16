@@ -249,6 +249,28 @@ class TestAllocationsConstructs(unittest.TestCase):
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, nn_out, np.array([True, False, True]))
 
+    def test_matrix_norm_2d_full(self):
+        """ Test normalization/cleanup of 2D (aggregated flow matrix
+
+        There is 1 null production (second product not produced)."""
+
+        Z = np.array([[0.,  0., 1.],
+                      [0.,  0., 0],
+                      [3.,  0., 0.5]])
+
+        V = np.array([[4, 1, 0],
+                      [0, 0, 0],
+                      [0, 0, 2.]])
+
+        A0 = np.array([[0.,  0, 0.5 ],
+                       [0.,  0, 0.0 ],
+                       [0.6, 0, 0.25]])
+
+        A, nn_in, nn_out = ac.matrix_norm(Z, V, True)
+
+        npt.assert_allclose(A, A0)
+        npt.assert_equal(nn_in, nn_out, np.array([True, False, True]))
+
 
     def test_matrix_norm_3d(self):
         """ Test normalization/cleanup of 3D (untraceable) flow matrix"""

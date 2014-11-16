@@ -34,7 +34,6 @@ letters represent vectors
 
 """
 import numpy as np
-import numpy.linalg as la
 # pylint: disable-msg=C0103
 
 
@@ -64,7 +63,7 @@ def pa_coeff(V, PSI):
     # Calculate the share of this total output of property that is mediated by
     # each output (share of total mass output by ind. J that happens via
     # commodity j.
-    PHI = la.inv(denominator).dot(V.T * PSI.T)  # <-- eq:PCHadamard
+    PHI = np.linalg.inv(denominator).dot(V.T * PSI.T)  # <-- eq:PCHadamard
     return PHI
 
 
@@ -326,11 +325,11 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
     mo = np.array(np.sum(V != 0, 0) != 1, dtype=int)
 
     invg = diaginv(g)
-    M = V_tild.dot(la.inv(ddiag(e_com.dot(V_bar))))
+    M = V_tild.dot(np.linalg.inv(ddiag(e_com.dot(V_bar))))
     # Prepare summation term used in definition of A_gamma
     n = 0
     tier = -1 * Gamma.dot(M)
-    tier_n = la.matrix_power(tier, 0)   # simplifies to identity matrix
+    tier_n = np.linalg.matrix_power(tier, 0)   # simplifies to identity matrix
     theSum = tier_n.dot(Gamma)
     n = n + 1
     while np.sum(tier_n) != 0 and n <= nmax:
@@ -341,7 +340,7 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
         B = U.dot(invg)
         B_so = B.dot(ddiag(so))
 
-        N = U.dot(la.inv(ddiag(e_com.dot(V_bar))))
+        N = U.dot(np.linalg.inv(ddiag(e_com.dot(V_bar))))
         N_so = N.dot(ddiag(mo))
 
         A_gamma = (B_so + N_so).dot(theSum)
@@ -351,7 +350,7 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
         for I in range(org):
             Bo = U[I, :, :].dot(invg)
             Bo_so = Bo.dot(ddiag(so))
-            No = U[I, :, :].dot(la.inv(ddiag(e_com.dot(V_bar))))
+            No = U[I, :, :].dot(np.linalg.inv(ddiag(e_com.dot(V_bar))))
             No_mo = No.dot(ddiag(mo))
             A_gamma[I, :, :] = (Bo_so + No_mo).dot(theSum)
 
@@ -639,11 +638,11 @@ def ctc(U, V, G=np.empty(0)):
     F = np.empty(0)
     # Basic Variables
     (_, _, _, _, _, _, q, _, _) = basic_variables(U, V, G)
-    A = U.dot(la.inv(V))  # <-- eq:ctc
+    A = U.dot(np.linalg.inv(V))  # <-- eq:ctc
     Z = A.dot(ddiag(q))
 
     if G.size:
-        F = G.dot(la.inv(V))
+        F = G.dot(np.linalg.inv(V))
         G_con = F.dot(ddiag(q))  # <--eq:CTCEnvExt
     return(Z, A, G_con, F)
 
@@ -817,11 +816,11 @@ def collapse_dims(x, first2dimensions=False):
         print('Already in 2-dimensional, pass')
         z = x
     else:
-        print(('PROBLEM? ndim(Y) = ', ndim(x)))
+        print('PROBLEM? ndim(Y) = {}'.format(x.ndim))
     return z
 
 
-def matrix_norm(Z, V):
+def matrix_norm(Z, V, keep_fullsize=False):
     """ Normalizes a flow matrix, even if some rows and columns are null
 
     Parameters
@@ -830,6 +829,9 @@ def matrix_norm(Z, V):
         dimensions : [com, com] | [com, ind,com] | [ind,com,ind,com]
     V : Production volume with which flows are normalized
         [com, ind]
+
+    keep_fullsize: Do not remove empty rows and columns from A, leave with
+                   zeros. [Default, false, don't do it]
 
     Returns
     --------
@@ -864,13 +866,20 @@ def matrix_norm(Z, V):
 
     if np.size(Z, 1) == com:
         nn_out = q != 0
-        A = Z[nn_in, :][:, nn_out].dot(la.inv(ddiag(q[nn_out])))
+        A = Z[nn_in, :][:, nn_out].dot(np.linalg.inv(ddiag(q[nn_out])))
     elif np.size(Z, 1) == (com * ind):
         nn_out = q_tr != 0
-        A = Z[nn_in, :][:, nn_out].dot(la.inv(ddiag(q_tr[nn_out])))
+        A = Z[nn_in, :][:, nn_out].dot(np.linalg.inv(ddiag(q_tr[nn_out])))
     else:
         nn_out = np.ones(np.size(Z, 1), dtype=bool)
-        A = Z.dot(la.inv(ddiag(q_tr)))
+        A = Z.dot(np.linalg.inv(ddiag(q_tr)))
+
+    if keep_fullsize:
+        A0 = np.zeros([Z.shape[0], A.shape[1]])
+        A1 = np.zeros_like(Z)
+        A0[nn_in, :] = A
+        A1[:, nn_out] = A0
+        A = A1
 
     # Return
     return (A, nn_in, nn_out)

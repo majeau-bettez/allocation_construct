@@ -34,6 +34,7 @@ letters represent vectors
 
 """
 import numpy as np
+import logging
 # pylint: disable-msg=C0103
 
 
@@ -285,7 +286,8 @@ def psc_agg(U, V, E_bar, Xi, G=np.empty(0)):
 
 ##############################################################################
 
-def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
+def alternate_tech(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None,
+                   res_tol=0):
     """Compilation of Alternate Technologies for use in AAA and AAC models
 
     Parameters
@@ -326,38 +328,58 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
 
     invg = diaginv(g)
     M = V_tild.dot(np.linalg.inv(ddiag(e_com.dot(V_bar))))
+
     # Prepare summation term used in definition of A_gamma
+
+    # Iteration 0: Prepare summation term used in definition of A_gamma
     n = 0
     tier = -1 * Gamma.dot(M)
-    tier_n = np.linalg.matrix_power(tier, 0)   # simplifies to identity matrix
+    tier_n = np.linalg.matrix_power(tier, n)   # simplifies to identity matrix
     theSum = tier_n.dot(Gamma)
     n = n + 1
-    while np.sum(tier_n) != 0 and n <= nmax:
+    res = np.sum(tier_n)
+
+    # Iterations 1 to nmax
+    while ((res > res_tol) or (res < 0)) and (n <= nmax):
         tier_n = tier_n.dot(tier)
-        theSum = theSum + tier_n.dot(Gamma)
+        theSum += tier_n.dot(Gamma)
         n += 1
-    if not traceable:
-        B = U.dot(invg)
-        B_so = B.dot(ddiag(so))
+        res = np.sum(tier_n)
+        logging.info("residual in alternate_tech: {}".format(res))
+    logging.info("number of iterations:{}".format(n))
 
-        N = U.dot(np.linalg.inv(ddiag(e_com.dot(V_bar))))
-        N_so = N.dot(ddiag(mo))
+    def apply_to_requirements(X):
+        """ Apply to either U or G to generate A_gamma or F_gamma"""
+        if not traceable:
+            B = X.dot(invg)
+            B_so = B.dot(ddiag(so))
 
-        A_gamma = (B_so + N_so).dot(theSum)
+            N = X.dot(diaginv(e_com.dot(V_bar)))
+            N_so = N.dot(ddiag(mo))
 
+            X_gamma = (B_so + N_so).dot(theSum)
+
+        else:
+            X_gamma = np.zeros([org, com, com])
+            for I in range(org):
+                Bo = X[I, :, :].dot(invg)
+                Bo_so = Bo.dot(ddiag(so))
+                No = X[I, :, :].dot(diaginv(e_com.dot(V_bar)))
+                No_mo = No.dot(ddiag(mo))
+                X_gamma[I, :, :] = (Bo_so + No_mo).dot(theSum)
+
+        return X_gamma
+
+    A_gamma = apply_to_requirements(U)
+    if G.size:
+        F_gamma = apply_to_requirements(G)
     else:
-        A_gamma = np.zeros([org, com, com])
-        for I in range(org):
-            Bo = U[I, :, :].dot(invg)
-            Bo_so = Bo.dot(ddiag(so))
-            No = U[I, :, :].dot(np.linalg.inv(ddiag(e_com.dot(V_bar))))
-            No_mo = No.dot(ddiag(mo))
-            A_gamma[I, :, :] = (Bo_so + No_mo).dot(theSum)
+        F_gamma = np.empty(0)
 
-    return(A_gamma)
+    return(A_gamma, F_gamma)
 
 
-def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
+def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None, res_tol=0):
     """ Alternate Activity Allocation of StUT or SuUT inventory
 
     Parameters
@@ -390,10 +412,9 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
     (V_tild, _, _, _) = _rank_products(E_bar, V)
 
     # Calculate competing technology requirements
-    A_gamma = alternate_tech(U, V, E_bar, Gamma, nmax, lay)
 
-    if G.size:
-        F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax, lay)
+    A_gamma, F_gamma = alternate_tech(U, V, E_bar, Gamma, G=G, nmax=nmax,
+                                      lay=lay, res_tol=res_tol)
 
     # Allocation step
     if not traceable:
@@ -427,7 +448,7 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
     return(Z, A, nn_in, nn_out, G_all, F)
 
 
-def aac_agg(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
+def aac_agg(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, res_tol=0):
     """ Alternative Activity aggregation Construct of SuUT inventory
 
     Parameters
@@ -460,7 +481,8 @@ def aac_agg(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
     (V_tild, _, _, _) = _rank_products(E_bar, V)
 
     # Calculate competing technology requirements
-    A_gamma = alternate_tech(U, V, E_bar, Gamma, nmax)
+    A_gamma, F_gamma = alternate_tech(U, V, E_bar, Gamma, G=G, nmax=nmax,
+                                      res_tol=res_tol)
 
     # Allocation step
     Z = (U - A_gamma.dot(V_tild)).dot(E_bar.T) + \
@@ -469,7 +491,6 @@ def aac_agg(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
 
     # Partitioning of environmental extensions
     if G.size:
-        F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax)
         G_con = (G - F_gamma.dot(V_tild)).dot(E_bar.T) + \
                 F_gamma.dot(ddiag(V_tild.dot(e_ind)))  # <-- eq:AACEnvExt
         (F, _, _) = matrix_norm(G_con, V)

@@ -668,7 +668,7 @@ class TestAllocationsConstructs(unittest.TestCase):
                         [0.        ,  0.        ,  0.06818182],
                         [1.66666667,  0.66666667,  0.        ]])
 
-        Ca = ac.alternate_tech(self.Uu, self.V, self.E_bar, self.Gamma)
+        Ca, __ = ac.alternate_tech(self.Uu, self.V, self.E_bar, self.Gamma)
 
         npt.assert_allclose(Ca0, Ca, atol=self.atol)
 
@@ -692,7 +692,7 @@ class TestAllocationsConstructs(unittest.TestCase):
                          [0.        ,  0.        ,  0.        ],
                          [1.66666667,  0.66666667,  0.        ]]])
 
-        Ca = ac.alternate_tech(self.Ut, self.V, self.E_bar, self.Gamma)
+        Ca, __  = ac.alternate_tech(self.Ut, self.V, self.E_bar, self.Gamma)
         npt.assert_allclose(Ca0, Ca, atol=self.atol)
 
     def test_aaa_untrace_simple(self):

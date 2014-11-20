@@ -196,8 +196,7 @@ def psa(U, V, E_bar, Xi, Theta=np.empty(0), G=np.empty(0)):
     F = np.empty(0)
 
     # Basic variables
-    (com, ind, org, traceable, _, e_ind, _, _, ext) = basic_variables(
-            U, V, G)
+    (com, ind, org, traceable, _, e_ind, _, _, ext) = basic_variables(U, V, G)
     (V_tild, V_bar, U_tild, _) = _rank_products(E_bar, V, U)
     DeltV = V_tild
 
@@ -346,7 +345,7 @@ def alternate_tech(U, V, E_bar, Gamma, nmax=np.Inf, lay=None):
             No_mo = No.dot(ddiag(mo))
             A_gamma[I, :, :] = (Bo_so + No_mo).dot(theSum)
 
-    return(A_gamma)
+    return A_gamma
 
 
 def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
@@ -598,7 +597,7 @@ def itc(U, V, G=np.empty(0)):
     if G.size:
         G_con = G.dot(diaginv(g)).dot(V.T)  # <-- eq:ITCEnvExt
 
-    (A, F,  _, _) = matrix_norm(Z, V, G_con)
+    (A, F, _, _) = matrix_norm(Z, V, G_con)
 
     return(Z, A, G_con, F)
 
@@ -639,8 +638,8 @@ def esc(U, V, E_bar=np.empty(0), G=np.empty(0)):
 
     # Construct extension flows
     if G.size:
-        G_con = G.dot(E_bar.T)  #  <-- eq:ESCEnvExt 
-    
+        G_con = G.dot(E_bar.T)  #  <-- eq:ESCEnvExt
+
     # Normalize and return
     A, F, nn_in, nn_out = matrix_norm(Z, V, G_con)
 
@@ -897,7 +896,7 @@ def matrix_norm(Z, V, G_con=np.empty(0), keep_size=False, just_filters=False):
     # Basic Variables
     com = np.size(V, 0)
     ind = np.size(V, 1)
-    com2 = np.size(Z, 0)
+    #com2 = np.size(Z, 0)
 
     # Total production (q, q_tr) and intermediate consumptin (u) vectors
     q = np.sum(V, 1)
@@ -907,47 +906,49 @@ def matrix_norm(Z, V, G_con=np.empty(0), keep_size=False, just_filters=False):
         for i in range(ind):
             q_tr[i * com:(i + 1) * com] = V[:, i]
 
+    # Column filtering: keep only commodities that are produced (cannot
+    # produce a normalized recipe for something that has not production volume)
+    if np.size(Z, 1) == com:
+        nn_out = q != 0
+    elif np.size(Z, 1) == com * ind:
+        nn_out = q_tr != 0
+    else:
+        raise Exception("Mismatched columns between Z and V")
+
+    # Row Filtering: Preserve only commodities if they are produced *OR* if
+    # they are used (even if they are not produced, to get the recipe right).
     if np.size(Z, 0) == com:
-        traceable = False
         nn_in = (abs(q) + abs(u)) != 0
     elif np.size(Z, 0) == com * ind:
-        traceable = True
         nn_in = (abs(q_tr) + abs(u)) != 0
     else:
         raise Exception("Mismatched rows between Z and V")
 
-    if np.size(Z, 1) == com:
-        nn_out = q != 0
-        q_inv = np.linalg.inv(ddiag(q[nn_out]))
-    elif np.size(Z, 1) == com * ind:
-        nn_out = q_tr != 0
-        q_inv = np.linalg.inv(ddiag(q_tr[nn_out]))
-    else:
-        raise Exception("Mismatched columns between Z and V")
 
-
-    # Filter inputs. Preserve only commodities that are used (to get the recipe
-    # right) or that are produced (to get the whole matrix square)
     if just_filters:
-        return (nn_in, nn_out)
-
-    # remove empty entried, diagonalize, inverse...
-    if np.size(Z, 1) == com:
-        q_inv = np.linalg.inv(ddiag(q[nn_out]))
-    else:
-        q_inv = np.linalg.inv(ddiag(q_tr[nn_out]))
-
-    # and use to normalize product and stressor flows.
-    A = Z[nn_in, :][:, nn_out].dot(q_inv)
-    if G_con.size:
-        F = G_con[:, nn_out].dot(q_inv)
-    else:
+        # just want filters, the rest empty
+        A = np.empty(0)
         F = np.empty(0)
+    else:
+        # Apply filters and normalize
 
-    # Restore size if need be
-    if keep_size:
-        A = restore_size(A, nn_in, nn_out)
-        F = restore_size(F, nn_out=nn_out)
+        # remove empty entried, diagonalize, inverse...
+        if np.size(Z, 1) == com:
+            q_inv = np.linalg.inv(ddiag(q[nn_out]))
+        else:
+            q_inv = np.linalg.inv(ddiag(q_tr[nn_out]))
+
+        # and use to normalize product and stressor flows.
+        A = Z[nn_in, :][:, nn_out].dot(q_inv)
+        if G_con.size:
+            F = G_con[:, nn_out].dot(q_inv)
+        else:
+            F = np.empty(0)
+
+        # Restore size if need be
+        if keep_size:
+            A = restore_size(A, nn_in, nn_out)
+            F = restore_size(F, nn_out=nn_out)
 
     # Return
     return (A, F, nn_in, nn_out)

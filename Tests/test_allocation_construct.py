@@ -244,7 +244,7 @@ class TestAllocationsConstructs(unittest.TestCase):
         A0 = np.array([[0.  ,  0.5 ],
                        [0.6 ,  0.25]])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z, V)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z, V)
 
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, nn_out, np.array([True, False, True]))
@@ -266,7 +266,7 @@ class TestAllocationsConstructs(unittest.TestCase):
                        [0.,  0, 0.0 ],
                        [0.6, 0, 0.25]])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z, V, True)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z, V, keep_size=True)
 
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, nn_out, np.array([True, False, True]))
@@ -297,7 +297,7 @@ class TestAllocationsConstructs(unittest.TestCase):
         nn_out0 = np.array([True, True, False, False, True, False, False,
                             True, False, False, False, True])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z, self.V)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z, self.V)
 
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, np.array([True, True, True]))
@@ -376,7 +376,7 @@ class TestAllocationsConstructs(unittest.TestCase):
             [0.        ,  0.        ,  0.        ,  0.        ,  0.06818182],
             [1.85      ,  0.        ,  0.75      ,  0.66666667,  0.        ]])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z0, self.V)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z0, self.V)
         npt.assert_allclose(A, A0)
 
     # ----------------------------------------

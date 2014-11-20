@@ -112,8 +112,6 @@ def pa(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
                 #eq:PAtrace
                 Z[I, :, J, :] = np.outer(U[I, :, J], PHI[J, :])
 
-    # Normalize system description
-    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
@@ -121,8 +119,8 @@ def pa(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
         for J in range(ind):
             G_all[:, J, :] = np.outer(G[:, J], PHI[J, :])
 
-        # Normalize environmental extension
-        (F, _, _) = matrix_norm(G_all, V)
+    # Normalize system description
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V, G_all)
 
     return (Z, A, nn_in, nn_out, G_all, F)
 
@@ -158,15 +156,12 @@ def pc_agg(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
 
     # Partitioning of product flows
     Z = U.dot(PHI)  # <-- eq:PCagg
-    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
         G_con = G.dot(PHI)  # <-- eq:PCEnvExt
 
-        # Normalize environmental extension
-        (F, _, _) = matrix_norm(G_con, V)
-
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V, G_con)
     return (Z, A, nn_in, nn_out, G_con, F)
 
 
@@ -223,8 +218,6 @@ def psa(U, V, E_bar, Xi, Theta=np.empty(0), G=np.empty(0)):
                         - Theta[I, :].dot(ddiag(Xi.dot(V_tild[:, J])))
                         + Theta[I, :].dot(ddiag(e_ind.dot(U_tild[:, :, J]))),
                    E_bar[:, J].T)
-    # Normalizing
-    (A, nn_in, nn_out) = matrix_norm(Z, V_bar)
 
     # Allocation of Environmental Extensions
     if G.size:
@@ -232,9 +225,9 @@ def psa(U, V, E_bar, Xi, Theta=np.empty(0), G=np.empty(0)):
         for J in range(ind):
             # eq:PSAEnvExt
             G_all[:, J, :] = np.outer(G[:, J], E_bar[:, J].T)
-        # Normalization
-        (F, _, _) = matrix_norm(G_all, V_bar)
 
+    # Normalizing
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V_bar, G_all)
     # Return allocated values
     return(Z, DeltV, A, nn_in, nn_out, G_all, F)
 
@@ -269,15 +262,13 @@ def psc_agg(U, V, E_bar, Xi, G=np.empty(0)):
 
     # Construction of Product Flows
     Z = (U - Xi.dot(V_tild)).dot(E_bar.T)  # <-- eq:PSCagg
-    # Normalizing
-    (A, nn_in, nn_out) = matrix_norm(Z, V_bar)
 
     # Allocation of Environmental Extensions
     if G.size:
         G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt
 
-        # Normalization
-        (F, _, _) = matrix_norm(G_con, V_bar)
+    # Normalizing
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V_bar, G_con)
 
     # Return allocated values
     return(Z, A, nn_in, nn_out, G_con, F)
@@ -411,7 +402,6 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
                         U[I, :, J] - A_gamma[I, :, :].dot(V_tild[:, J]),
                         E_bar[:, J].T
                         ) + A_gamma[I, :, :].dot(ddiag(V_tild[:, J]))
-    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
@@ -421,9 +411,9 @@ def aaa(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf, lay=None):
             G_all[:, J, :] = np.outer(
                     G[:, J] - F_gamma.dot(V_tild[:, J]), E_bar[:, J].T) + \
                     F_gamma.dot(ddiag(V_tild[:, J]))
-        (F, _, _) = matrix_norm(G_all, V)
 
 #   # Output
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V, G_all)
     return(Z, A, nn_in, nn_out, G_all, F)
 
 
@@ -465,15 +455,14 @@ def aac_agg(U, V, E_bar, Gamma, G=np.empty(0), nmax=np.Inf):
     # Allocation step
     Z = (U - A_gamma.dot(V_tild)).dot(E_bar.T) + \
             A_gamma.dot(ddiag(V_tild.dot(e_ind)))  # <-- eq:AACagg
-    (A, nn_in, nn_out) = matrix_norm(Z, V)
 
     # Partitioning of environmental extensions
     if G.size:
         F_gamma = alternate_tech(G, V, E_bar, Gamma, nmax)
         G_con = (G - F_gamma.dot(V_tild)).dot(E_bar.T) + \
                 F_gamma.dot(ddiag(V_tild.dot(e_ind)))  # <-- eq:AACEnvExt
-        (F, _, _) = matrix_norm(G_con, V)
 
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V, G_con)
 #   Output
     return(Z, A, nn_in, nn_out, G_con, F)
 
@@ -520,8 +509,6 @@ def lsa(U, V, E_bar, G=np.empty(0)):
         Z[:, J, :] = np.outer(U[:, J], E_bar[:, J].T)  # <-- eq:LSA
         V_dd[:, J] = E_bar[:, J].dot(g[J])  # <-- eq:LSA
 
-    # Normalizing
-    (A, nn_in, nn_out) = matrix_norm(Z, V_dd)
 
     # Allocation of Environmental Extensions
     if G.size:
@@ -530,8 +517,8 @@ def lsa(U, V, E_bar, G=np.empty(0)):
             # eq:LSAEnvExt
             G_all[:, J, :] = np.outer(G[:, J], E_bar[:, J].T)
 
-        # Normalization
-        (F, _, _) = matrix_norm(G_all, V_dd)
+    # Normalizing
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V_dd, G_all)
 
     # Return allocated values
     return(Z, DeltV, A, nn_in, nn_out, G_all, F)
@@ -566,14 +553,13 @@ def lsc(U, V, E_bar, G=np.empty(0)):
     # Allocation of Product Flows
     Z = U.dot(E_bar.T)  # <-- eq:LSCagg
     V_dd = E_bar.dot(ddiag(g))  # <-- eq:LSCagg
-    # Normalizing
-    (A, nn_in, nn_out) = matrix_norm(Z, V_dd)
 
     # Allocation of Environmental Extensions
     if G.size:
         G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt
-        # Normalization
-        (F, _, _) = matrix_norm(G_con, V_dd)
+
+    # Normalizing
+    (A, F, nn_in, nn_out) = matrix_norm(Z, V_dd, G_con)
 
     # Return allocated values
     return(Z, A, nn_in, nn_out, G_con, F)
@@ -606,11 +592,11 @@ def itc(U, V, G=np.empty(0)):
     (_, _, _, _, _, _, _, g, _) = basic_variables(U, V, G)
 
     Z = U.dot(diaginv(g)).dot(V.T)  # <-- eq:itc
-    (A, _, _) = matrix_norm(Z, V)
 
     if G.size:
         G_con = G.dot(diaginv(g)).dot(V.T)  # <-- eq:ITCEnvExt
-        (F, _, _) = matrix_norm(G_con, V)
+
+    (A, F,  _, _) = matrix_norm(Z, V, G_con)
 
     return(Z, A, G_con, F)
 
@@ -677,11 +663,11 @@ def btc(U, V, E_bar=np.empty(0), G=np.empty(0)):
 
     # The construct
     Z = (U - V_tild).dot(E_bar.T)  # <-- eq:btc
-    (A, _, _) = matrix_norm(Z, V_bar)
 
     if G.size:
         G_con = G.dot(E_bar.T)  # <-- eq:NonProdBalEnvExt
-        (F, _, _) = matrix_norm(G_con, V_bar)
+
+    (A, F, _, _) = matrix_norm(Z, V_bar, G_con)
     return(Z, A, G_con, F)
 
 ###############################################################################
@@ -820,22 +806,38 @@ def collapse_dims(x, first2dimensions=False):
     return z
 
 
-def matrix_norm(Z, V, keep_fullsize=False):
-    """ Normalizes a flow matrix, even if some rows and columns are null
+
+def matrix_norm(Z, V, G_con=np.empty(0), keep_size=False, just_filters=False):
+    """ Normalizes a flow matrices, even if some rows and columns are null
+
+    Process product flows (Z) and environmental extensions. Normalizes columns
+    for which a product is indeed supplied, and remove rows and columns of
+    products that are not produced (nan-columns).
+
+    For readability, also remove rows of products that are not used
+
+    If keep_size: don't remove an rows or columns, fill with zeros if nan.
 
     Parameters
     ----------
     Z : Flow matrix to be normalized
-        dimensions : [com, com] | [com, ind,com] | [ind,com,ind,com]
+        dimensions : [com, com] | [com, ind, com] | [ind,com,ind,com]
     V : Production volume with which flows are normalized
         [com, ind]
 
-    keep_fullsize: Do not remove empty rows and columns from A, leave with
+    G_con: Allocated or construced but unnormalized environmental extensions
+           [str, com] | [str, ind, com]
+
+    keep_size: Do not remove empty rows and columns from A, leave with
                    zeros. [Default, false, don't do it]
 
-    Returns
+    just_filters: Don't normalize anything, just return nn_in and nn_out
+
+
+    Returns (when just_filters==False, otherwise just last two)
     --------
-    A : Normalized flow matrix, without null rows and columns
+    A : Normalized flow matrix, without null/nan rows and nan columns
+    F : Normalized extensions, by default without nan columns
     nn_in : filter applied to rows (0 for removed rows, 1 for kept rows)
     nn_out : filter applied to cols (0 for removed cols, 1 for kept cols)
 
@@ -843,47 +845,88 @@ def matrix_norm(Z, V, keep_fullsize=False):
     # Collapse dimensions
     if Z.ndim > 2:
         Z = collapse_dims(Z)
+    if G_con.ndim > 2:
+        G_con = collapse_dims(G_con)
+
     # Basic Variables
     com = np.size(V, 0)
     ind = np.size(V, 1)
     com2 = np.size(Z, 0)
 
-    # Total production, both aggregate and traceable
+    # Total production (q, q_tr) and intermediate consumptin (u) vectors
     q = np.sum(V, 1)
     u = np.sum(Z, 1)
-    q_tr = np.zeros(ind * com)
-    for i in range(ind):
-        q_tr[i * com:(i + 1) * com] = V[:, i]
+    if np.max(Z.shape) == com * ind:
+        q_tr = np.zeros(ind * com)
+        for i in range(ind):
+            q_tr[i * com:(i + 1) * com] = V[:, i]
 
-    # Filter inputs. Preserve only commodities that are used (to get the recipe
-    # right) or that are produced (to get the whole matrix square)
     if np.size(Z, 0) == com:
+        traceable = False
         nn_in = (abs(q) + abs(u)) != 0
     elif np.size(Z, 0) == com * ind:
+        traceable = True
         nn_in = (abs(q_tr) + abs(u)) != 0
     else:
-        nn_in = np.ones(com2, dtype=bool)
+        raise Exception("Mismatched rows between Z and V")
 
     if np.size(Z, 1) == com:
         nn_out = q != 0
-        A = Z[nn_in, :][:, nn_out].dot(np.linalg.inv(ddiag(q[nn_out])))
-    elif np.size(Z, 1) == (com * ind):
+        q_inv = np.linalg.inv(ddiag(q[nn_out]))
+    elif np.size(Z, 1) == com * ind:
         nn_out = q_tr != 0
-        A = Z[nn_in, :][:, nn_out].dot(np.linalg.inv(ddiag(q_tr[nn_out])))
+        q_inv = np.linalg.inv(ddiag(q_tr[nn_out]))
     else:
-        nn_out = np.ones(np.size(Z, 1), dtype=bool)
-        A = Z.dot(np.linalg.inv(ddiag(q_tr)))
+        raise Exception("Mismatched columns between Z and V")
 
-    if keep_fullsize:
-        A0 = np.zeros([Z.shape[0], A.shape[1]])
-        A1 = np.zeros_like(Z)
-        A0[nn_in, :] = A
-        A1[:, nn_out] = A0
-        A = A1
+
+    # Filter inputs. Preserve only commodities that are used (to get the recipe
+    # right) or that are produced (to get the whole matrix square)
+    if just_filters:
+        return (nn_in, nn_out)
+
+    # remove empty entried, diagonalize, inverse...
+    if np.size(Z, 1) == com:
+        q_inv = np.linalg.inv(ddiag(q[nn_out]))
+    else:
+        q_inv = np.linalg.inv(ddiag(q_tr[nn_out]))
+
+    # and use to normalize product and stressor flows.
+    A = Z[nn_in, :][:, nn_out].dot(q_inv)
+    if G_con.size:
+        F = G_con[:, nn_out].dot(q_inv)
+    else:
+        F = np.empty(0)
+
+    # Restore size if need be
+    if keep_size:
+        A = restore_size(A, nn_in, nn_out)
+        F = restore_size(F, nn_out=nn_out)
 
     # Return
-    return (A, nn_in, nn_out)
+    return (A, F, nn_in, nn_out)
 
+def restore_size(X, nn_in=None, nn_out=None):
+
+    # Make sure we have somthing significant
+    if not X.size:
+        return X
+
+    # Restore  rows
+    if nn_in is not None:
+        X0 = np.zeros((len(nn_in), X.shape[1]))
+        X0[nn_in, :] = X
+    else:
+        X0 = X
+
+    # Restore cols
+    if nn_out is not None:
+        X1 = np.zeros((X0.shape[0], len(nn_out)))
+        X1[:, nn_out] = X0
+    else:
+        X1 = X0
+
+    return X1
 def diaginv(x):
     """Diagonalizes a vector and inverses it, even if it contains zero values.
 

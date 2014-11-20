@@ -911,6 +911,55 @@ class TestAllocationsConstructs(unittest.TestCase):
         npt.assert_allclose(G_con0, G_con, atol=self.atol)
         npt.assert_allclose(F0, F, atol=self.atol)
 
+    def test_esc_nonsquare(self):
+        """ Test European System Construct on non-square system """
+
+        Z0 = np.array([[ 0.  ,  0.  ,  0.  ],
+                       [ 0.  ,  0.  ,  0.75],
+                       [ 4.  ,  2.75,  0.  ]])
+
+        A0 = np.array([[ 0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.        ,  0.06818182],
+                       [ 2.        ,  0.55      ,  0.        ]])
+
+        G0 = np.array([[ 10.,  19.,  18.],
+                       [  0.,   1.,   0.]])
+
+        F0 = np.array([[ 5.        ,  3.8       ,  1.63636364],
+                       [ 0.        ,  0.2       ,  0.        ]])
+
+        Z, A, nn_in, nn_out, G, F = ac.esc(self.Uu, self.V, self.E_bar, self.G)
+
+        npt.assert_allclose(Z0, Z, atol=self.atol)
+        npt.assert_allclose(A0, A, atol=self.atol)
+        npt.assert_allclose(G0, G, atol=self.atol)
+        npt.assert_allclose(F0, F, atol=self.atol)
+
+    def test_esc_square(self):
+        """ Test European System Construct on square system, assume primary
+        production on diagonal."""
+
+        Z0 = np.array([[ 0.  ,  0.  ,  0.  ],
+                       [ 0.  ,  0.  ,  0.75],
+                       [ 4.  ,  2.75,  0.  ]])
+
+        A0 = np.array([[ 0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.        ,  0.06818182],
+                       [ 2.        ,  0.55      ,  0.        ]])
+
+        G_con0 = np.array([[ 10.,  19.,  18.],
+                       [  0.,   1.,   0.]])
+
+        F0 = np.array([[ 5.        ,  3.8       ,  1.63636364],
+                       [ 0.        ,  0.2       ,  0.        ]])
+
+        Z, A, nn_in, nn_out, G_con, F = ac.esc(self.Ua, self.Va, G=self.Ga)
+
+        npt.assert_allclose(Z0, Z, atol=self.atol)
+        npt.assert_allclose(A0, A, atol=self.atol)
+        npt.assert_allclose(G_con0, G_con, atol=self.atol)
+        npt.assert_allclose(F0, F, atol=self.atol)
+
     def test_btc_nonsquare(self):
         """ Tests Byproduct Technology Construct on non-square SuUT"""
 

@@ -34,6 +34,7 @@ letters represent vectors
 
 """
 import numpy as np
+import logging
 # pylint: disable-msg=C0103
 
 
@@ -588,6 +589,7 @@ def itc(U, V, G=np.empty(0)):
     # Default output
     G_con = np.empty(0)
     F = np.empty(0)
+
     # Basic Variables
     (_, _, _, _, _, _, _, g, _) = basic_variables(U, V, G)
 
@@ -599,6 +601,50 @@ def itc(U, V, G=np.empty(0)):
     (A, F,  _, _) = matrix_norm(Z, V, G_con)
 
     return(Z, A, G_con, F)
+
+def esc(U, V, E_bar=np.empty(0), G=np.empty(0)):
+    """ Performs European System Construct on SuUT inventory
+
+    Parameters
+    ----------
+    U :     Use table [com, ind]
+    V :     Supply table [com, ind]
+    E_bar:  0 or 1 mapping of primary commodities to industries [com,ind]
+            (if absent and system square, assume primary prod is on diagonal)
+    G :     Unallocated emissions [ext, ind] (default=np.empty(0))
+
+    Returns
+    --------
+    Z:      constructed intermediate flow matrix [com,com]
+    A:      Normalized technical requirements [com,com]
+    nn_in:  filter to remove np.empty rows in A or Z [com]
+    nn_out: filter to remove np.empty columns in A or Z [com]
+    G_con:  Unnormalized, constructed emissions [ext,com]
+    F:      Normalized, constructed emissions [ext, com]
+
+    """
+
+    # Default output
+    G_con = np.empty(0)
+    F = np.empty(0)
+
+    # When no explicit designation of primary production, assume it is on the
+    # diagonal if the supply table is square
+    if (not E_bar.size) and (V.shape[0] == V.shape[1]):
+        E_bar = np.eye(V.shape[0])
+        logging.warning("ESC: assuming primary production is on diagonal")
+
+    # Construct product flows
+    Z = U.dot(E_bar.T)  # <--eq:esc_notsquare
+
+    # Construct extension flows
+    if G.size:
+        G_con = G.dot(E_bar.T)  #  <-- eq:ESCEnvExt 
+    
+    # Normalize and return
+    A, F, nn_in, nn_out = matrix_norm(Z, V, G_con)
+
+    return Z, A, nn_in, nn_out, G_con, F
 
 
 def ctc(U, V, G=np.empty(0)):

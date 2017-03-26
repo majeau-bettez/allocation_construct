@@ -47,7 +47,7 @@ def pa_coeff(V, PSI):
     Parameters
     ----------
     V : Supply table [com, ind]
-    PSI : Properties table [com, properties]
+    PSI : Properties of commodities to guide PA in each industry [com, ind]
 
     Returns
     --------
@@ -75,7 +75,7 @@ def pa(U, V, PSI, PHI=np.empty(0), G=np.empty(0)):
     ----------
     U : Use table [com, ind] or [org, com, ind]
     V : Supply table [com, ind]
-    PSI : Properties table [com, properties]
+    PSI : Properties of commodities to guide PA in each industry [com, ind]
     PHI : Partition coefficient [ind, com (default=np.empty(0))]
     G : Unallocated emissions [ext, ind] (default=np.empty(0))
 

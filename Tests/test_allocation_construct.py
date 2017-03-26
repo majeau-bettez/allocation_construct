@@ -244,7 +244,7 @@ class TestAllocationsConstructs(unittest.TestCase):
         A0 = np.array([[0.  ,  0.5 ],
                        [0.6 ,  0.25]])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z, V)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z, V)
 
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, nn_out, np.array([True, False, True]))
@@ -266,7 +266,7 @@ class TestAllocationsConstructs(unittest.TestCase):
                        [0.,  0, 0.0 ],
                        [0.6, 0, 0.25]])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z, V, True)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z, V, keep_size=True)
 
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, nn_out, np.array([True, False, True]))
@@ -297,7 +297,7 @@ class TestAllocationsConstructs(unittest.TestCase):
         nn_out0 = np.array([True, True, False, False, True, False, False,
                             True, False, False, False, True])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z, self.V)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z, self.V)
 
         npt.assert_allclose(A, A0)
         npt.assert_equal(nn_in, np.array([True, True, True]))
@@ -376,7 +376,7 @@ class TestAllocationsConstructs(unittest.TestCase):
             [0.        ,  0.        ,  0.        ,  0.        ,  0.06818182],
             [1.85      ,  0.        ,  0.75      ,  0.66666667,  0.        ]])
 
-        A, nn_in, nn_out = ac.matrix_norm(Z0, self.V)
+        A, __, nn_in, nn_out = ac.matrix_norm(Z0, self.V)
         npt.assert_allclose(A, A0)
 
     # ----------------------------------------
@@ -905,6 +905,55 @@ class TestAllocationsConstructs(unittest.TestCase):
 
 
         Z, A, G_con, F = ac.itc(self.Uu, self.V, self.G)
+
+        npt.assert_allclose(Z0, Z, atol=self.atol)
+        npt.assert_allclose(A0, A, atol=self.atol)
+        npt.assert_allclose(G_con0, G_con, atol=self.atol)
+        npt.assert_allclose(F0, F, atol=self.atol)
+
+    def test_esc_nonsquare(self):
+        """ Test European System Construct on non-square system """
+
+        Z0 = np.array([[ 0.  ,  0.  ,  0.  ],
+                       [ 0.  ,  0.  ,  0.75],
+                       [ 4.  ,  2.75,  0.  ]])
+
+        A0 = np.array([[ 0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.        ,  0.06818182],
+                       [ 2.        ,  0.55      ,  0.        ]])
+
+        G0 = np.array([[ 10.,  19.,  18.],
+                       [  0.,   1.,   0.]])
+
+        F0 = np.array([[ 5.        ,  3.8       ,  1.63636364],
+                       [ 0.        ,  0.2       ,  0.        ]])
+
+        Z, A, nn_in, nn_out, G, F = ac.esc(self.Uu, self.V, self.E_bar, self.G)
+
+        npt.assert_allclose(Z0, Z, atol=self.atol)
+        npt.assert_allclose(A0, A, atol=self.atol)
+        npt.assert_allclose(G0, G, atol=self.atol)
+        npt.assert_allclose(F0, F, atol=self.atol)
+
+    def test_esc_square(self):
+        """ Test European System Construct on square system, assume primary
+        production on diagonal."""
+
+        Z0 = np.array([[ 0.  ,  0.  ,  0.  ],
+                       [ 0.  ,  0.  ,  0.75],
+                       [ 4.  ,  2.75,  0.  ]])
+
+        A0 = np.array([[ 0.        ,  0.        ,  0.        ],
+                       [ 0.        ,  0.        ,  0.06818182],
+                       [ 2.        ,  0.55      ,  0.        ]])
+
+        G_con0 = np.array([[ 10.,  19.,  18.],
+                       [  0.,   1.,   0.]])
+
+        F0 = np.array([[ 5.        ,  3.8       ,  1.63636364],
+                       [ 0.        ,  0.2       ,  0.        ]])
+
+        Z, A, nn_in, nn_out, G_con, F = ac.esc(self.Ua, self.Va, G=self.Ga)
 
         npt.assert_allclose(Z0, Z, atol=self.atol)
         npt.assert_allclose(A0, A, atol=self.atol)
